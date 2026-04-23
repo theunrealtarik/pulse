@@ -1,4 +1,7 @@
-use std::time::Instant;
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 mod cpu;
 mod disk;
@@ -17,15 +20,10 @@ pub trait Module {
     fn name(&self) -> &'static str;
     fn interval(&self) -> std::time::Duration;
 
-    fn get_last(&self) -> std::time::Instant;
+    fn get_last(&self) -> Option<std::time::Instant>;
     fn set_last(&mut self, instant: Instant);
 
     fn load(&mut self) -> Result<serde_json::Value, lib::PulseError>;
-
-    fn to_json(&mut self) -> Result<String, lib::PulseError> {
-        let data = self.load()?;
-        serde_json::to_string(&data).map_err(|err| lib::PulseError::Json(err))
-    }
 }
 
 #[derive(Default)]
@@ -39,11 +37,24 @@ impl Scheduler {
     }
 
     pub fn run(&mut self) -> Result<(), PulseError> {
-        for module in self.modules.iter_mut() {
-            let json = module.to_json()?;
-            println!("{}", json);
-        }
+        loop {
+            let now = Instant::now();
+            let mut output = serde_json::Map::new();
 
-        Ok(())
+            for module in self.modules.iter_mut() {
+                let last = module.get_last();
+                if last.is_none() || now.duration_since(last.unwrap_or(now)) >= module.interval() {
+                    let json = module.load()?;
+                    output.insert(module.name().to_string(), json);
+                    module.set_last(now);
+                }
+            }
+
+            if !output.is_empty() {
+                println!("{}", serde_json::Value::Object(output));
+            }
+
+            thread::sleep(Duration::from_millis(100));
+        }
     }
 }

@@ -27,16 +27,16 @@ pub struct Mem {
 pub struct MemModule {
     name: &'static str,
     interval: Duration,
-    last: Instant,
-    sys: &'static mut System,
+    last: Option<Instant>,
+    sys: SharedSystem,
 }
 
 impl MemModule {
-    pub fn new(name: &'static str, interval: Duration, sys: &'static mut System) -> Self {
+    pub fn new(name: &'static str, interval: Duration, sys: SharedSystem) -> Self {
         Self {
             name,
             interval,
-            last: Instant::now(),
+            last: None,
             sys,
         }
     }
@@ -51,19 +51,20 @@ impl super::Module for MemModule {
         self.interval
     }
 
-    fn get_last(&self) -> std::time::Instant {
+    fn get_last(&self) -> Option<std::time::Instant> {
         self.last
     }
 
     fn set_last(&mut self, instant: Instant) {
-        self.last = instant;
+        self.last = Some(instant);
     }
 
     fn load(&mut self) -> Result<serde_json::Value, lib::PulseError> {
-        self.sys.refresh_memory();
+        let mut sys = self.sys.borrow_mut();
+        sys.refresh_memory();
 
-        let ram_total = self.sys.total_memory();
-        let ram_used = self.sys.used_memory();
+        let ram_total = sys.total_memory();
+        let ram_used = sys.used_memory();
         let ram_percent = if ram_total == 0 {
             0.0
         } else {
@@ -76,8 +77,8 @@ impl super::Module for MemModule {
             percent: Percent::from(ram_percent),
         };
 
-        let swap_total = self.sys.total_swap();
-        let swap_used = self.sys.used_swap();
+        let swap_total = sys.total_swap();
+        let swap_used = sys.used_swap();
         let swap_percent = if swap_total == 0 {
             0.0
         } else {

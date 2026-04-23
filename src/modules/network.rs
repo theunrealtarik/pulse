@@ -98,7 +98,7 @@ impl Interface {
 
 type IfacesMap = HashMap<IfaceName, Interface>;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Network {
     default: Interface,
     ifaces: IfacesMap,
@@ -107,7 +107,7 @@ pub struct Network {
 pub struct NetworkModule {
     name: &'static str,
     interval: Duration,
-    last: Instant,
+    last: Option<Instant>,
 }
 
 impl NetworkModule {
@@ -115,7 +115,7 @@ impl NetworkModule {
         Self {
             name,
             interval,
-            last: Instant::now(),
+            last: None,
         }
     }
 }
@@ -129,12 +129,12 @@ impl super::Module for NetworkModule {
         self.interval
     }
 
-    fn get_last(&self) -> std::time::Instant {
+    fn get_last(&self) -> Option<std::time::Instant> {
         self.last
     }
 
     fn set_last(&mut self, instant: Instant) {
-        self.last = instant
+        self.last = Some(instant)
     }
 
     fn load(&mut self) -> Result<serde_json::Value, PulseError> {
@@ -248,7 +248,7 @@ impl super::Module for NetworkModule {
             .remove(&default_name)
             .ok_or_else(|| PulseError::NotFound(format!("{}", default_name)))?;
 
-        Ok(serde_json::to_value(Network { default, ifaces })
-            .map_err(|err| PulseError::Json(err))?)
+        let network = Network { default, ifaces };
+        Ok(serde_json::to_value(network).map_err(|err| PulseError::Json(err))?)
     }
 }

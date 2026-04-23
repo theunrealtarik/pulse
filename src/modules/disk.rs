@@ -19,16 +19,16 @@ pub struct Disk {
 pub struct DiskModule {
     name: &'static str,
     interval: Duration,
-    last: Instant,
-    disks: &'static mut Disks,
+    last: Option<Instant>,
+    disks: SharedDisks,
 }
 
 impl DiskModule {
-    pub fn new(name: &'static str, interval: Duration, disks: &'static mut Disks) -> Self {
+    pub fn new(name: &'static str, interval: Duration, disks: SharedDisks) -> Self {
         Self {
             name,
             interval,
-            last: Instant::now(),
+            last: None,
             disks,
         }
     }
@@ -43,18 +43,19 @@ impl super::Module for DiskModule {
         self.interval
     }
 
-    fn get_last(&self) -> std::time::Instant {
+    fn get_last(&self) -> Option<std::time::Instant> {
         self.last
     }
 
     fn set_last(&mut self, instant: Instant) {
-        self.last = instant
+        self.last = Some(instant);
     }
 
     fn load(&mut self) -> Result<serde_json::Value, lib::PulseError> {
+        let disks = self.disks.borrow();
         let mut disks_data: HashMap<PathBuf, Disk> = HashMap::new();
 
-        for disk in self.disks.iter() {
+        for disk in disks.iter() {
             let total = disk.total_space();
             let free = disk.available_space();
             let used = total.saturating_sub(free);

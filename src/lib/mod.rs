@@ -1,7 +1,10 @@
-use std::{fs, path::PathBuf};
+use std::fs;
+use std::path::PathBuf;
+use std::{cell::RefCell, rc::Rc};
 
 use serde::{Deserialize, Serialize, ser::SerializeStruct};
 use strum::IntoEnumIterator;
+use sysinfo::{Disks, System};
 
 pub const CLASS_NET: &str = "/sys/class/net";
 pub const CLASS_HWMON: &str = "/sys/class/hwmon";
@@ -9,6 +12,9 @@ pub const PROC_NET: &str = "/proc/net";
 pub const PROC_CPUINFO: &str = "/proc/cpuinfo";
 
 // Helpers
+
+pub type SharedSystem = Rc<RefCell<System>>;
+pub type SharedDisks = Rc<RefCell<Disks>>;
 
 #[macro_export]
 macro_rules! parse_from_line {
@@ -164,7 +170,7 @@ impl Serialize for Bytes {
         let mut state = serializer.serialize_struct("Bytes", 2)?;
 
         state.serialize_field("raw", &self.0)?;
-        state.serialize_field("formatted", self)?;
+        state.serialize_field("formatted", &format!("{}", &self.format()))?;
 
         state.end()
     }

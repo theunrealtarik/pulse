@@ -21,16 +21,16 @@ pub struct CPU {
 pub struct CpuModule {
     name: &'static str,
     interval: Duration,
-    last: Instant,
-    sys: &'static mut System,
+    last: Option<Instant>,
+    sys: SharedSystem,
 }
 
 impl CpuModule {
-    pub fn new(name: &'static str, interval: Duration, sys: &'static mut System) -> Self {
+    pub fn new(name: &'static str, interval: Duration, sys: SharedSystem) -> Self {
         Self {
             name,
             interval,
-            last: Instant::now(),
+            last: None,
             sys,
         }
     }
@@ -45,19 +45,20 @@ impl super::Module for CpuModule {
         self.interval
     }
 
-    fn get_last(&self) -> std::time::Instant {
+    fn get_last(&self) -> Option<std::time::Instant> {
         self.last
     }
 
     fn set_last(&mut self, instant: Instant) {
-        self.last = instant;
+        self.last = Some(instant);
     }
 
     fn load(&mut self) -> Result<serde_json::Value, lib::PulseError> {
-        self.sys.refresh_cpu_all();
+        let mut sys = self.sys.borrow_mut();
 
-        let cores = self
-            .sys
+        sys.refresh_cpu_all();
+
+        let cores = sys
             .cpus()
             .iter()
             .map(|c| Percent::from(c.cpu_usage()))
@@ -68,7 +69,7 @@ impl super::Module for CpuModule {
         let brand = parse_from_line!(cpu_info_raw, 4)?;
         let arch = System::cpu_arch();
 
-        let usage = Percent::from(self.sys.global_cpu_usage());
+        let usage = Percent::from(sys.global_cpu_usage());
         let freq = Frequency::from(
             parse_from_line!(cpu_info_raw, 7)?
                 .parse::<f32>()
