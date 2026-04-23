@@ -19,17 +19,17 @@ pub struct CPU {
 }
 
 pub struct CpuModule {
-    name: &'static str,
+    name: String,
     interval: Duration,
     last: Option<Instant>,
     sys: SharedSystem,
 }
 
 impl CpuModule {
-    pub fn new(name: &'static str, interval: Duration, sys: SharedSystem) -> Self {
+    pub fn new(name: String, interval: Option<Duration>, sys: SharedSystem) -> Self {
         Self {
             name,
-            interval,
+            interval: interval.unwrap_or(Duration::from_secs(1)),
             last: None,
             sys,
         }
@@ -37,8 +37,8 @@ impl CpuModule {
 }
 
 impl super::Module for CpuModule {
-    fn name(&self) -> &'static str {
-        self.name
+    fn name(&self) -> &str {
+        &self.name
     }
 
     fn interval(&self) -> std::time::Duration {
@@ -73,7 +73,7 @@ impl super::Module for CpuModule {
         let freq = Frequency::from(
             parse_from_line!(cpu_info_raw, 7)?
                 .parse::<f32>()
-                .map_err(|_| PulseError::Parse("cpu freq"))?,
+                .map_err(PulseError::from)?,
         );
 
         let logical = cores.len() as u8;
@@ -86,7 +86,7 @@ impl super::Module for CpuModule {
                     .unwrap_or_default()
                     .trim()
                     .parse::<u8>()
-                    .map_err(|_| PulseError::Parse("parsing core"))?;
+                    .map_err(PulseError::from)?;
 
                 if physical <= core {
                     physical = core + 1
@@ -104,20 +104,20 @@ impl super::Module for CpuModule {
             m.entry(|path| {
                 let file_name = path
                     .file_name()
-                    .ok_or_else(|| PulseError::Invalid("entry file name"))?
+                    .ok_or_else(|| PulseError::Invalid("entry file name".to_string()))?
                     .to_string_lossy();
 
                 return Ok(file_name.starts_with("temp") | file_name.starts_with("_input"));
             })
             .unwrap_or_default()
         })
-        .ok_or_else(|| PulseError::Missing("temp entry"))?;
+        .ok_or_else(|| PulseError::Missing("temp entry".to_string()))?;
 
         let temp_str = fs::read_to_string(&temp_monitor)?;
         let temp_val = temp_str
             .trim()
             .parse::<f32>()
-            .map_err(|_| PulseError::Parse("temp value"))?;
+            .map_err(PulseError::from)?;
         let temp = Temprature::from(temp_val / 1000.0);
 
         Ok(serde_json::to_value(CPU {

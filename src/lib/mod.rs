@@ -24,7 +24,7 @@ macro_rules! parse_from_line {
             .nth($line_idx)
             .and_then(|line| line.split(':').nth(1))
             .map(|s| s.trim().to_string())
-            .ok_or(lib::PulseError::Parse("iw output"))
+            .ok_or(lib::PulseError::Parse("iw output".to_string()))
     };
 }
 
@@ -86,10 +86,39 @@ impl Monitor {
 pub enum PulseError {
     Io(std::io::Error),
     Json(serde_json::Error),
-    Parse(&'static str),
-    Missing(&'static str),
-    Invalid(&'static str),
+    Parse(String),
+    Missing(String),
+    Invalid(String),
     NotFound(String),
+    ParseInt(std::num::ParseIntError),
+    ParseFloat(std::num::ParseFloatError),
+}
+
+impl std::fmt::Display for PulseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PulseError::Io(err) => write!(f, "IO error: {}", err),
+            PulseError::Json(err) => write!(f, "JSON error: {}", err),
+            PulseError::Parse(msg) => write!(f, "Parse error: {}", msg),
+            PulseError::Missing(msg) => write!(f, "Missing: {}", msg),
+            PulseError::Invalid(msg) => write!(f, "Invalid: {}", msg),
+            PulseError::NotFound(msg) => write!(f, "Not found: {}", msg),
+            PulseError::ParseInt(err) => write!(f, "Parse int error: {}", err),
+            PulseError::ParseFloat(err) => write!(f, "Parse float error: {}", err),
+        }
+    }
+}
+
+impl std::error::Error for PulseError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            PulseError::Io(err) => Some(err),
+            PulseError::Json(err) => Some(err),
+            PulseError::ParseInt(err) => Some(err),
+            PulseError::ParseFloat(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 impl From<std::io::Error> for PulseError {
@@ -101,6 +130,18 @@ impl From<std::io::Error> for PulseError {
 impl From<serde_json::Error> for PulseError {
     fn from(e: serde_json::Error) -> Self {
         PulseError::Json(e)
+    }
+}
+
+impl From<std::num::ParseIntError> for PulseError {
+    fn from(e: std::num::ParseIntError) -> Self {
+        PulseError::ParseInt(e)
+    }
+}
+
+impl From<std::num::ParseFloatError> for PulseError {
+    fn from(e: std::num::ParseFloatError) -> Self {
+        PulseError::ParseFloat(e)
     }
 }
 

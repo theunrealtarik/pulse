@@ -105,24 +105,24 @@ pub struct Network {
 }
 
 pub struct NetworkModule {
-    name: &'static str,
+    name: String,
     interval: Duration,
     last: Option<Instant>,
 }
 
 impl NetworkModule {
-    pub fn new(name: &'static str, interval: Duration) -> Self {
+    pub fn new(name: String, interval: Option<Duration>) -> Self {
         Self {
             name,
-            interval,
+            interval: interval.unwrap_or(Duration::from_secs(1)),
             last: None,
         }
     }
 }
 
 impl super::Module for NetworkModule {
-    fn name(&self) -> &'static str {
-        self.name
+    fn name(&self) -> &str {
+        &self.name
     }
 
     fn interval(&self) -> std::time::Duration {
@@ -163,14 +163,14 @@ impl super::Module for NetworkModule {
 
             let name = parts
                 .get(0)
-                .ok_or_else(|| PulseError::Missing("route name"))?
+                .ok_or_else(|| PulseError::Missing("route name".to_string()))?
                 .to_string();
 
             let metric = parts
                 .get(6)
-                .ok_or_else(|| PulseError::Missing("route metric"))?
+                .ok_or_else(|| PulseError::Missing("route metric".to_string()))?
                 .parse::<u32>()
-                .map_err(|_| PulseError::Parse("parse route metric"))?;
+                .map_err(PulseError::from)?;
 
             if metric < default_metric {
                 default_name = name;
@@ -191,7 +191,7 @@ impl super::Module for NetworkModule {
             let name = entry
                 .file_name()
                 .to_str()
-                .ok_or(PulseError::Invalid("invalid interface name"))?
+                .ok_or(PulseError::Invalid("invalid interface name".to_string()))?
                 .to_string();
 
             let connection = if path.join("wireless").exists() {
@@ -201,13 +201,13 @@ impl super::Module for NetworkModule {
                 let ssid = parse_from_line!(output, 1)?;
                 let freq = parse_from_line!(output, 2)?
                     .parse::<f32>()
-                    .map_err(|_| PulseError::Parse("freq"))?;
+                    .map_err(PulseError::from)?;
                 let signal = parse_from_line!(output, 5)?
                     .split_whitespace()
                     .next()
-                    .ok_or(PulseError::Parse("signal split"))?
+                    .ok_or(PulseError::Parse("signal split".to_string()))?
                     .parse::<i32>()
-                    .map_err(|_| PulseError::Parse("signal parse"))?;
+                    .map_err(PulseError::from)?;
 
                 Connection::Wireless { ssid, freq, signal }
             } else {
@@ -222,7 +222,7 @@ impl super::Module for NetworkModule {
             } else {
                 flags_str.parse::<u32>()
             }
-            .map_err(|_| lib::PulseError::Parse("flags"))?;
+            .map_err(PulseError::from)?;
 
             let flags = Flag::from_bits(flags_val);
 

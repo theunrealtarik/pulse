@@ -17,17 +17,17 @@ pub struct Disk {
 }
 
 pub struct DiskModule {
-    name: &'static str,
+    name: String,
     interval: Duration,
     last: Option<Instant>,
     disks: SharedDisks,
 }
 
 impl DiskModule {
-    pub fn new(name: &'static str, interval: Duration, disks: SharedDisks) -> Self {
+    pub fn new(name: String, interval: Option<Duration>, disks: SharedDisks) -> Self {
         Self {
             name,
-            interval,
+            interval: interval.unwrap_or(Duration::from_secs(1)),
             last: None,
             disks,
         }
@@ -35,8 +35,8 @@ impl DiskModule {
 }
 
 impl super::Module for DiskModule {
-    fn name(&self) -> &'static str {
-        self.name
+    fn name(&self) -> &str {
+        &self.name
     }
 
     fn interval(&self) -> std::time::Duration {

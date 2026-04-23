@@ -17,8 +17,28 @@ pub use disk::DiskModule;
 pub use mem::MemModule;
 pub use network::NetworkModule;
 
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Hash,
+    PartialEq,
+    Eq,
+    strum::Display,
+    strum::EnumString,
+    strum::EnumIter,
+    clap::ValueEnum,
+)]
+#[strum(serialize_all = "lowercase")]
+pub enum ModuleKind {
+    Cpu,
+    Mem,
+    Disk,
+    Network,
+}
+
 pub trait Module {
-    fn name(&self) -> &'static str;
+    fn name(&self) -> &str;
     fn interval(&self) -> std::time::Duration;
 
     fn get_last(&self) -> Option<std::time::Instant>;

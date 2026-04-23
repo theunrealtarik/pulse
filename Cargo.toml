@@ -14,4 +14,4 @@ strum = { version = "0.28", features = ["derive"] }
 derive_more = { version = "2.1.1", features = ["from", "add", "mul" ]}
 get_if_addrs = "0.5.3"
 sysinfo = "0.38.4"
-clap = "4.6.1"
+clap = { version = "4.0", features = ["derive"] }

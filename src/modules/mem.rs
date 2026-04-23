@@ -25,17 +25,17 @@ pub struct Mem {
 }
 
 pub struct MemModule {
-    name: &'static str,
+    name: String,
     interval: Duration,
     last: Option<Instant>,
     sys: SharedSystem,
 }
 
 impl MemModule {
-    pub fn new(name: &'static str, interval: Duration, sys: SharedSystem) -> Self {
+    pub fn new(name: String, interval: Option<Duration>, sys: SharedSystem) -> Self {
         Self {
             name,
-            interval,
+            interval: interval.unwrap_or(Duration::from_secs(1)),
             last: None,
             sys,
         }
@@ -43,8 +43,8 @@ impl MemModule {
 }
 
 impl super::Module for MemModule {
-    fn name(&self) -> &'static str {
-        self.name
+    fn name(&self) -> &str {
+        &self.name
     }
 
     fn interval(&self) -> std::time::Duration {
