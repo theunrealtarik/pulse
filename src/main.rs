@@ -15,17 +15,17 @@ fn main() {
     scheduler.push(Box::new(NetworkModule::new("net", Duration::from_secs(1))));
     scheduler.push(Box::new(CpuModule::new(
         "cpu",
-        Duration::from_secs(1),
+        Duration::from_secs(15),
         Rc::clone(&sys),
     )));
     scheduler.push(Box::new(MemModule::new(
         "mem",
-        Duration::from_secs(1),
+        Duration::from_secs(15),
         Rc::clone(&sys),
     )));
     scheduler.push(Box::new(DiskModule::new(
         "disk",
-        Duration::from_secs(1),
+        Duration::from_secs(30),
         Rc::clone(&dsk),
     )));
 

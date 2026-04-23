@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     thread,
     time::{Duration, Instant},
 };
@@ -29,6 +30,7 @@ pub trait Module {
 #[derive(Default)]
 pub struct Scheduler {
     modules: Vec<Box<dyn Module>>,
+    object: HashMap<String, serde_json::Value>,
 }
 
 impl Scheduler {
@@ -39,19 +41,20 @@ impl Scheduler {
     pub fn run(&mut self) -> Result<(), PulseError> {
         loop {
             let now = Instant::now();
-            let mut output = serde_json::Map::new();
-
             for module in self.modules.iter_mut() {
                 let last = module.get_last();
                 if last.is_none() || now.duration_since(last.unwrap_or(now)) >= module.interval() {
                     let json = module.load()?;
-                    output.insert(module.name().to_string(), json);
+                    self.object.insert(module.name().to_string(), json);
                     module.set_last(now);
                 }
             }
 
-            if !output.is_empty() {
-                println!("{}", serde_json::Value::Object(output));
+            if !self.object.is_empty() {
+                println!(
+                    "{}",
+                    serde_json::to_value(&self.object).map_err(|err| PulseError::Json(err))?
+                );
             }
 
             thread::sleep(Duration::from_millis(100));

@@ -79,8 +79,18 @@ impl super::Module for CpuModule {
         let logical = cores.len() as u8;
         let mut physical = 0;
         for line in cpu_info_raw.lines() {
-            if line.strip_prefix("core id\t:").is_some() {
-                physical += 1;
+            if line.strip_prefix("core id\t\t:").is_some() {
+                let core = line
+                    .split(":")
+                    .nth(1)
+                    .unwrap_or_default()
+                    .trim()
+                    .parse::<u8>()
+                    .map_err(|_| PulseError::Parse("parsing core"))?;
+
+                if physical <= core {
+                    physical = core + 1
+                }
             }
         }
 
