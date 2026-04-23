@@ -1,0 +1,16 @@
+[package]
+name = "pulse"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "lib"
+path = "src/lib/mod.rs"
+
+[dependencies]
+serde_json = "1.0.149"
+serde = { version = "1.0.228", features = ["derive"] }
+strum = { version = "0.28", features = ["derive"] }
+derive_more = { version = "2.1.1", features = ["from", "add", "mul" ]}
+get_if_addrs = "0.5.3"
+sysinfo = "0.38.4"
