@@ -7,6 +7,9 @@ edition = "2024"
 name = "lib"
 path = "src/lib/mod.rs"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+libdrm_amdgpu_sys = { version = "0.8.13" }
+
 [dependencies]
 serde_json = "1.0.149"
 serde = { version = "1.0.228", features = ["derive"] }

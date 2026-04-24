@@ -1,6 +1,5 @@
 mod modules;
 
-use std::hash::Hash;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::time::Duration;
@@ -11,6 +10,8 @@ use strum::IntoEnumIterator;
 use sysinfo::{Disks, System};
 
 use modules::{CpuModule, DiskModule, MemModule, ModuleKind, NetworkModule, Scheduler};
+
+use crate::modules::GpuModule;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -76,14 +77,19 @@ fn main() {
     }
 
     scheduler.push(Box::new(NetworkModule::new(
-        ModuleKind::Network.to_string(),
-        intervals.remove(&ModuleKind::Network),
+        ModuleKind::Net.to_string(),
+        intervals.remove(&ModuleKind::Net),
     )));
 
     scheduler.push(Box::new(CpuModule::new(
         ModuleKind::Cpu.to_string(),
         intervals.remove(&ModuleKind::Cpu),
         Rc::clone(&sys),
+    )));
+
+    scheduler.push(Box::new(GpuModule::new(
+        ModuleKind::Gpu.to_string(),
+        intervals.remove(&ModuleKind::Gpu),
     )));
 
     scheduler.push(Box::new(MemModule::new(

@@ -86,6 +86,7 @@ impl Monitor {
 pub enum PulseError {
     Io(std::io::Error),
     Json(serde_json::Error),
+    Init(String),
     Parse(String),
     Missing(String),
     Invalid(String),
@@ -97,14 +98,15 @@ pub enum PulseError {
 impl std::fmt::Display for PulseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PulseError::Io(err) => write!(f, "IO error: {}", err),
-            PulseError::Json(err) => write!(f, "JSON error: {}", err),
-            PulseError::Parse(msg) => write!(f, "Parse error: {}", msg),
-            PulseError::Missing(msg) => write!(f, "Missing: {}", msg),
-            PulseError::Invalid(msg) => write!(f, "Invalid: {}", msg),
-            PulseError::NotFound(msg) => write!(f, "Not found: {}", msg),
-            PulseError::ParseInt(err) => write!(f, "Parse int error: {}", err),
-            PulseError::ParseFloat(err) => write!(f, "Parse float error: {}", err),
+            Self::Io(err) => write!(f, "IO error: {}", err),
+            Self::Json(err) => write!(f, "JSON error: {}", err),
+            Self::Init(err) => write!(f, "Initialization: {}", err),
+            Self::Parse(msg) => write!(f, "Parse error: {}", msg),
+            Self::Missing(msg) => write!(f, "Missing: {}", msg),
+            Self::Invalid(msg) => write!(f, "Invalid: {}", msg),
+            Self::NotFound(msg) => write!(f, "Not found: {}", msg),
+            Self::ParseInt(err) => write!(f, "Parse int error: {}", err),
+            Self::ParseFloat(err) => write!(f, "Parse float error: {}", err),
         }
     }
 }

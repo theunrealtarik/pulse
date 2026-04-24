@@ -114,10 +114,7 @@ impl super::Module for CpuModule {
         .ok_or_else(|| PulseError::Missing("temp entry".to_string()))?;
 
         let temp_str = fs::read_to_string(&temp_monitor)?;
-        let temp_val = temp_str
-            .trim()
-            .parse::<f32>()
-            .map_err(PulseError::from)?;
+        let temp_val = temp_str.trim().parse::<f32>().map_err(PulseError::from)?;
         let temp = Temprature::from(temp_val / 1000.0);
 
         Ok(serde_json::to_value(CPU {

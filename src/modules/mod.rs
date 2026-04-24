@@ -14,6 +14,7 @@ use lib::PulseError;
 
 pub use cpu::CpuModule;
 pub use disk::DiskModule;
+pub use gpus::GpuModule;
 pub use mem::MemModule;
 pub use network::NetworkModule;
 
@@ -32,9 +33,10 @@ pub use network::NetworkModule;
 #[strum(serialize_all = "lowercase")]
 pub enum ModuleKind {
     Cpu,
+    Gpu,
     Mem,
     Disk,
-    Network,
+    Net,
 }
 
 pub trait Module {

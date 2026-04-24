@@ -184,6 +184,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52ff2c0fe9bc6cb6b14a0592c2ff4fa9ceb83eea9db979b0487cd054946a2b8f"
 
 [[package]]
+name = "libdrm_amdgpu_sys"
+version = "0.8.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "380c3cfe531e0237f58a16c75710b17eaa006614c6ab115efa921ac8b019c25b"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -239,6 +248,7 @@ dependencies = [
  "clap",
  "derive_more",
  "get_if_addrs",
+ "libdrm_amdgpu_sys",
  "serde",
  "serde_json",
  "strum",
