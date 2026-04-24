@@ -2,7 +2,6 @@ use std::time::{Duration, Instant};
 
 use lib::*;
 use serde::{Deserialize, Serialize};
-use sysinfo::System;
 
 macro_rules! mem_object {
     ($name:ident) => {

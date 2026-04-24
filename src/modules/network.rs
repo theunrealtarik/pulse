@@ -10,16 +10,17 @@ use serde::{Deserialize, Serialize};
 type IfaceName = String;
 
 #[derive(Debug, Clone, Serialize, Deserialize, strum::Display)]
+#[strum(serialize_all = "lowercase")]
 pub enum Connection {
-    #[strum(serialize = "wired")]
+    #[serde(rename = "wired")]
     Wired,
-    #[strum(serialize = "wireless")]
+    #[serde(rename = "wireless")]
     Wireless {
         ssid: String,
         freq: f32,
         signal: i32,
     },
-    #[strum(serialize = "unknown")]
+    #[serde(rename = "unknown")]
     Unknown,
 }
 
