@@ -12,14 +12,14 @@ type IfaceName = String;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Signal {
     value: i32,
-    qaulity: i32,
+    quality: i32,
 }
 
 impl From<i32> for Signal {
     fn from(value: i32) -> Self {
         Self {
             value,
-            qaulity: (2 * (value + 100)).clamp(0, 100),
+            quality: (2 * (value + 100)).clamp(0, 100),
         }
     }
 }
