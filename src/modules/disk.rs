@@ -4,7 +4,6 @@ use std::{collections::HashMap, time::Instant};
 
 use lib::*;
 use serde::{Deserialize, Serialize};
-use sysinfo::Disks;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Disk {

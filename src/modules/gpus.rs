@@ -2,7 +2,6 @@ use lib::*;
 
 use libdrm_amdgpu_sys::AMDGPU;
 use libdrm_amdgpu_sys::AMDGPU::GPU_INFO;
-use libdrm_amdgpu_sys::AMDGPU::SENSOR_INFO::SENSOR_TYPE;
 use libdrm_amdgpu_sys::LibDrmAmdgpu;
 
 use serde::{Deserialize, Serialize};
