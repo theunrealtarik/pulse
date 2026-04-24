@@ -1,5 +1,6 @@
 mod modules;
 
+use std::collections::HashSet;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::time::Duration;
@@ -22,6 +23,8 @@ struct Args {
     once: bool,
     #[arg(long, num_args = 1.., value_delimiter = ' ', value_parser = Args::parse_refresh, help = "Set the refresh rate for each module (module:duration)")]
     refresh: Vec<(ModuleKind, Duration)>,
+    #[arg(long, num_args = 1.., value_delimiter = ' ', help = "To only fetch the provided modules and ignore the rest")]
+    only: Vec<ModuleKind>,
 }
 
 impl Args {
@@ -78,30 +81,44 @@ fn main() {
         intervals.insert(module_kind, duration);
     }
 
-    scheduler.push(Box::new(NetworkModule::new(
-        intervals.remove(&ModuleKind::Net),
-    )));
+    let no_filter = args.only.is_empty();
+    let only = args.only.iter().collect::<HashSet<_>>();
 
-    scheduler.push(Box::new(CpuModule::new(
-        intervals.remove(&ModuleKind::Cpu),
-        Rc::clone(&sys),
-    )));
+    let enabled = |kind: &ModuleKind| no_filter || only.contains(kind);
 
-    scheduler.push(Box::new(GpuModule::new(intervals.remove(&ModuleKind::Gpu))));
+    let cpu = ModuleKind::Cpu;
+    if enabled(&cpu) {
+        scheduler.push(Box::new(CpuModule::new(
+            intervals.remove(&cpu),
+            Rc::clone(&sys),
+        )));
+    }
 
-    scheduler.push(Box::new(MemModule::new(
-        intervals.remove(&ModuleKind::Mem),
-        Rc::clone(&sys),
-    )));
+    let gpu = ModuleKind::Gpu;
+    if enabled(&gpu) {
+        scheduler.push(Box::new(GpuModule::new(intervals.remove(&gpu))));
+    }
 
-    scheduler.push(Box::new(DiskModule::new(
-        intervals.remove(&ModuleKind::Disk),
-        Rc::clone(&dsk),
-    )));
+    let mem = ModuleKind::Mem;
+    if enabled(&mem) {
+        scheduler.push(Box::new(MemModule::new(
+            intervals.remove(&mem),
+            Rc::clone(&sys),
+        )));
+    }
 
-    scheduler.push(Box::new(LoadModule::new(
-        intervals.remove(&ModuleKind::Load),
-    )));
+    let disk = ModuleKind::Disk;
+    if enabled(&disk) {
+        scheduler.push(Box::new(DiskModule::new(
+            intervals.remove(&disk),
+            Rc::clone(&dsk),
+        )));
+    }
+
+    let load = ModuleKind::Load;
+    if enabled(&load) {
+        scheduler.push(Box::new(LoadModule::new(intervals.remove(&load))));
+    }
 
     scheduler.run(args.once);
 }
