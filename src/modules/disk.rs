@@ -17,7 +17,7 @@ pub struct Partition {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Disk {
     device: String,
-    partitions: Vec<Partition>,
+    partitions: HashMap<PathBuf, Partition>,
 }
 
 pub struct DiskModule {
@@ -73,7 +73,7 @@ impl super::Module for DiskModule {
             let mount_point = PathBuf::from(disk.mount_point());
 
             let partition = Partition {
-                mount_point,
+                mount_point: mount_point.clone(),
                 total: Bytes::from(total),
                 free: Bytes::from(free),
                 used: Bytes::from(used),
@@ -82,10 +82,13 @@ impl super::Module for DiskModule {
 
             disks_data
                 .entry(device_name.clone())
-                .and_modify(|disk| disk.partitions.push(partition.clone()))
+                .and_modify(|disk| {
+                    disk.partitions
+                        .insert(mount_point.clone(), partition.clone());
+                })
                 .or_insert(Disk {
                     device: device_name,
-                    partitions: vec![partition],
+                    partitions: HashMap::from([(mount_point, partition)]),
                 });
         }
 
