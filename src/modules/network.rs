@@ -1,4 +1,5 @@
 use std::fs;
+use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::Instant;
@@ -120,6 +121,28 @@ pub struct Network {
     ifaces: IfacesMap,
 }
 
+impl Network {
+    pub fn get_active_iface() -> Result<IfaceName, PulseError> {
+        let cmd = Command::new("ip")
+            .args(["route", "get", "1.1.1.1"])
+            .output()?;
+        let output = String::from_utf8_lossy(&cmd.stdout);
+        let mut parts = output.trim().split_whitespace();
+
+        while let Some(token) = parts.next() {
+            if token == "dev" {
+                if let Some(iface) = parts.next() {
+                    return Ok(iface.to_string());
+                }
+            }
+        }
+
+        Err(PulseError::Parse(
+            "failed to parse default network iface".to_string(),
+        ))
+    }
+}
+
 pub struct NetworkModule {
     name: String,
     interval: Duration,
@@ -156,43 +179,6 @@ impl super::Module for NetworkModule {
     fn load(&mut self) -> Result<serde_json::Value, PulseError> {
         let net_path = PathBuf::from(CLASS_NET);
         let mut ifaces: HashMap<String, Interface> = HashMap::new();
-
-        let default_route = fs::read_to_string(PathBuf::from(PROC_NET).join("route"))?;
-
-        let mut default_name = String::new();
-        let mut default_metric = u32::MAX;
-
-        for (i, line) in default_route.lines().enumerate() {
-            if i == 0 {
-                continue;
-            }
-
-            let parts = line
-                .split("\t")
-                .into_iter()
-                .map(str::trim)
-                .collect::<Vec<_>>();
-
-            if parts.get(1) != Some(&"00000000") {
-                continue;
-            }
-
-            let name = parts
-                .get(0)
-                .ok_or_else(|| PulseError::Missing("route name".to_string()))?
-                .to_string();
-
-            let metric = parts
-                .get(6)
-                .ok_or_else(|| PulseError::Missing("route metric".to_string()))?
-                .parse::<u32>()
-                .map_err(PulseError::from)?;
-
-            if metric < default_metric {
-                default_name = name;
-                default_metric = metric;
-            }
-        }
 
         let addrs = get_if_addrs::get_if_addrs()
             .map_err(lib::PulseError::Io)?
@@ -268,6 +254,7 @@ impl super::Module for NetworkModule {
             );
         }
 
+        let default_name = Network::get_active_iface()?;
         let default = ifaces
             .remove(&default_name)
             .ok_or_else(|| PulseError::NotFound(format!("{}", default_name)))?;
@@ -276,3 +263,6 @@ impl super::Module for NetworkModule {
         Ok(serde_json::to_value(network).map_err(|err| PulseError::Json(err))?)
     }
 }
+
+#[test]
+fn test_network_module() {}

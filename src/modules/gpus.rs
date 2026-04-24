@@ -184,7 +184,7 @@ impl super::Module for GpuModule {
 }
 
 #[test]
-fn get_gpu_info() {
+fn test_gpu_module() {
     use crate::modules::Module;
     let mut gpu_module = GpuModule::new(None);
     let gpu_data = gpu_module.load().unwrap();
