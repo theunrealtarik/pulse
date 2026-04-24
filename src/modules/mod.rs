@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    io::Write,
     thread,
     time::{Duration, Instant},
 };
@@ -84,6 +85,7 @@ impl Scheduler {
                 && !self.object.is_empty()
             {
                 println!("{}", output);
+                std::io::stdout().flush().unwrap();
             }
 
             if once {

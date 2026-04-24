@@ -5,14 +5,19 @@ use std::{collections::HashMap, time::Instant};
 use lib::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Disk {
-    name: String,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Partition {
     mount_point: PathBuf,
     total: Bytes,
     free: Bytes,
     used: Bytes,
     usage: Percent,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Disk {
+    device: String,
+    partitions: Vec<Partition>,
 }
 
 pub struct DiskModule {
@@ -52,7 +57,7 @@ impl super::Module for DiskModule {
 
     fn load(&mut self) -> Result<serde_json::Value, lib::PulseError> {
         let disks = self.disks.borrow();
-        let mut disks_data: HashMap<PathBuf, Disk> = HashMap::new();
+        let mut disks_data: HashMap<String, Disk> = HashMap::new();
 
         for disk in disks.iter() {
             let total = disk.total_space();
@@ -64,19 +69,24 @@ impl super::Module for DiskModule {
                 (used as f64 / total as f64) * 100.0
             };
 
+            let device_name = disk.name().to_string_lossy().to_string();
             let mount_point = PathBuf::from(disk.mount_point());
 
-            disks_data.insert(
-                mount_point.clone(),
-                Disk {
-                    name: disk.name().to_string_lossy().into(),
-                    mount_point,
-                    total: Bytes::from(total),
-                    free: Bytes::from(free),
-                    used: Bytes::from(used),
-                    usage: Percent::new(usage as f32),
-                },
-            );
+            let partition = Partition {
+                mount_point,
+                total: Bytes::from(total),
+                free: Bytes::from(free),
+                used: Bytes::from(used),
+                usage: Percent::new(usage as f32),
+            };
+
+            disks_data
+                .entry(device_name.clone())
+                .and_modify(|disk| disk.partitions.push(partition.clone()))
+                .or_insert(Disk {
+                    device: device_name,
+                    partitions: vec![partition],
+                });
         }
 
         Ok(serde_json::to_value(disks_data).map_err(|err| PulseError::Json(err))?)
