@@ -9,6 +9,21 @@ use serde::{Deserialize, Serialize};
 
 type IfaceName = String;
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct Signal {
+    value: i32,
+    qaulity: i32,
+}
+
+impl From<i32> for Signal {
+    fn from(value: i32) -> Self {
+        Self {
+            value,
+            qaulity: (2 * (value + 100)).clamp(0, 100),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, strum::Display)]
 #[strum(serialize_all = "lowercase")]
 pub enum Connection {
@@ -18,7 +33,7 @@ pub enum Connection {
     Wireless {
         ssid: String,
         freq: f32,
-        signal: i32,
+        signal: Signal,
     },
     #[serde(rename = "unknown")]
     Unknown,
@@ -207,14 +222,18 @@ impl super::Module for NetworkModule {
                 let freq = parse_from_line!(output, 2)?
                     .parse::<f32>()
                     .map_err(PulseError::from)?;
-                let signal = parse_from_line!(output, 5)?
+                let signal_value = parse_from_line!(output, 5)?
                     .split_whitespace()
                     .next()
                     .ok_or(PulseError::Parse("signal split".to_string()))?
                     .parse::<i32>()
                     .map_err(PulseError::from)?;
 
-                Connection::Wireless { ssid, freq, signal }
+                Connection::Wireless {
+                    ssid,
+                    freq,
+                    signal: Signal::from(signal_value),
+                }
             } else {
                 Connection::Wired
             };
