@@ -99,7 +99,9 @@ fn main() {
         Rc::clone(&dsk),
     )));
 
-    // scheduler.push(Box::new(LoadModule::))
+    scheduler.push(Box::new(LoadModule::new(
+        intervals.remove(&ModuleKind::Load),
+    )));
 
     scheduler.run(args.once);
 }
