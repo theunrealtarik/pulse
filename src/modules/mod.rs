@@ -60,7 +60,7 @@ impl Scheduler {
         self.modules.push(m);
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self, once: bool) {
         loop {
             let now = Instant::now();
             for module in self.modules.iter_mut() {
@@ -82,6 +82,10 @@ impl Scheduler {
                 && !self.object.is_empty()
             {
                 println!("{}", output);
+            }
+
+            if once {
+                break;
             }
 
             thread::sleep(Duration::from_millis(100));

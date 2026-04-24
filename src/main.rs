@@ -18,6 +18,8 @@ use crate::modules::GpuModule;
 struct Args {
     #[arg(long, help = "List avaialable modules")]
     modules: bool,
+    #[arg(long, help = "Run the program only one time")]
+    once: bool,
     #[arg(long, num_args = 1.., value_delimiter = ' ', value_parser = Args::parse_refresh, help = "Set the refresh rate for each module (module:duration)")]
     refresh: Vec<(ModuleKind, Duration)>,
 }
@@ -104,5 +106,5 @@ fn main() {
         Rc::clone(&dsk),
     )));
 
-    scheduler.run();
+    scheduler.run(args.once);
 }
