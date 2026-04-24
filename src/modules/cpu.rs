@@ -94,26 +94,17 @@ impl super::Module for CpuModule {
             }
         }
 
-        let temp_monitor = Monitor::new(|path| {
-            let name = fs::read_to_string(path.join("name"))?;
-            return Ok(
-                name.to_lowercase().contains("k10temp") || name.to_lowercase().contains("cpu")
-            );
-        })
-        .map(|m| {
-            m.entry(|path| {
-                let file_name = path
-                    .file_name()
-                    .ok_or_else(|| PulseError::Invalid("entry file name".to_string()))?
-                    .to_string_lossy();
+        let cpu_monitor =
+            Monitor::from_name(|name| name.contains("k10temp") || name.contains("cpu"))?;
 
-                return Ok(file_name.starts_with("temp") | file_name.starts_with("_input"));
-            })
-            .unwrap_or_default()
-        })
-        .ok_or_else(|| PulseError::Missing("temp entry".to_string()))?;
+        let temp_str = cpu_monitor.read(|path| {
+            let file_name = path
+                .file_name()
+                .ok_or_else(|| PulseError::Invalid("entry file name".to_string()))?
+                .to_string_lossy();
+            return Ok(file_name.starts_with("temp") || file_name.ends_with("_input"));
+        })?;
 
-        let temp_str = fs::read_to_string(&temp_monitor)?;
         let temp_val = temp_str.trim().parse::<f32>().map_err(PulseError::from)?;
         let temp = Temprature::from(temp_val / 1000.0);
 

@@ -1,20 +1,19 @@
 use lib::*;
 
+use libdrm_amdgpu_sys::AMDGPU;
 use libdrm_amdgpu_sys::AMDGPU::GPU_INFO;
+use libdrm_amdgpu_sys::AMDGPU::SENSOR_INFO::SENSOR_TYPE;
+use libdrm_amdgpu_sys::LibDrmAmdgpu;
 
 use serde::{Deserialize, Serialize};
 
+use std::fs;
 use std::fs::File;
+
 use std::os::fd::AsRawFd;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::time::Instant;
-
-// AMD
-use libdrm_amdgpu_sys::AMDGPU;
-use libdrm_amdgpu_sys::LibDrmAmdgpu;
-
-use crate::modules::Module;
 
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, strum::Display)]
@@ -36,10 +35,19 @@ pub struct GpuInfo {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GpuTemprature {
+    edge: Temprature,
+    junction: Temprature,
+    memory: Temprature,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GpuStats {
     vram_total: Bytes,
     vram_used: Bytes,
     vram_usage: Percent,
+    temp: GpuTemprature,
+    fan_speed: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -83,6 +91,12 @@ impl super::Module for GpuModule {
     }
 
     fn load(&mut self) -> Result<serde_json::Value, lib::PulseError> {
+        let gpus_hw_paths = Monitor::find_many_in_dir(&PathBuf::from(CLASS_HWMON), |path| {
+            let name = fs::read_to_string(path.join("name"))?;
+            let name = name.trim().to_lowercase();
+            Ok(name.contains("amdgpu"))
+        })?;
+
         let libdrm_amdgpu = LibDrmAmdgpu::new()
             .map_err(|_| PulseError::Init(String::from("failed to initialize libdrm")))?;
         let pci_devs = AMDGPU::get_all_amdgpu_pci_bus();
@@ -90,15 +104,40 @@ impl super::Module for GpuModule {
             return Err(PulseError::Missing("no amd gpu found".to_string()));
         }
 
-        let drm_paths = pci_devs
+        let drms = pci_devs
             .iter()
-            .map(|dev| dev.get_drm_render_path().map_err(PulseError::Io))
+            .map(|dev| {
+                (
+                    dev.get_drm_render_path().map_err(PulseError::Io),
+                    dev.get_hwmon_path()
+                        .ok_or_else(|| PulseError::NotFound(format!("device hwmon path"))),
+                )
+            })
             .collect::<Vec<_>>();
 
         let mut amd_gpus: Vec<GPU> = Vec::new();
-        for path in drm_paths {
-            let path = path?;
-            let fs = File::open(path.clone()).map_err(PulseError::from)?;
+        for (drm_path, hwmon_path) in drms {
+            let drm_path = drm_path?;
+            let hwmon_path = hwmon_path?;
+
+            let gpu_hw = Monitor::from(hwmon_path);
+
+            macro_rules! parse_entry {
+                ($entry_name:literal, $parse_type:ty) => {
+                    fs::read_to_string(gpu_hw.path().join($entry_name))?
+                        .trim()
+                        .parse::<$parse_type>()
+                        .map_err(PulseError::from)
+                };
+            }
+
+            let edg_temp = parse_entry!("temp1_input", f32)?;
+            let jnc_temp = parse_entry!("temp2_input", f32)?;
+            let mem_temp = parse_entry!("temp3_input", f32)?;
+
+            let fan_speed = parse_entry!("fan1_input", usize)?;
+
+            let fs = File::open(drm_path.clone()).map_err(PulseError::from)?;
             let (device, _, _) = libdrm_amdgpu
                 .init_device_handle(fs.as_raw_fd())
                 .map_err(|err| PulseError::Init(format!("failed to initialize device: {}", err)))?;
@@ -107,22 +146,26 @@ impl super::Module for GpuModule {
                 .device_info()
                 .map_err(|err| PulseError::NotFound(format!("device info ({})", err)))?;
 
-            let gpu_stats = device
+            let mem_info = device
                 .memory_info()
-                .and_then(|s| {
-                    let vram_total = s.vram.total_heap_size;
-                    let vram_used = s.vram.heap_usage;
-
-                    return Ok(GpuStats {
-                        vram_total: Bytes::from(vram_total),
-                        vram_used: Bytes::from(vram_used),
-                        vram_usage: Percent::from(vram_used as f32 / vram_total as f32 * 100.0),
-                    });
-                })
                 .map_err(|err| PulseError::NotFound(format!("memory info ({})", err)))?;
 
+            let gpu_stats = GpuStats {
+                vram_total: Bytes::from(mem_info.vram.total_heap_size),
+                vram_used: Bytes::from(mem_info.vram.heap_usage),
+                vram_usage: Percent::from(
+                    mem_info.vram.heap_usage as f64 / mem_info.vram.total_heap_size as f64 * 100.0,
+                ),
+                temp: GpuTemprature {
+                    edge: Temprature::from(edg_temp / 1000.0),
+                    junction: Temprature::from(jnc_temp / 1000.0),
+                    memory: Temprature::from(mem_temp / 1000.0),
+                },
+                fan_speed,
+            };
+
             let gpu_info = GpuInfo {
-                path,
+                path: drm_path,
                 vendor: String::from("AMD"),
                 model: info.find_device_name_or_default(),
                 family: info.get_family_name().to_string(),
@@ -142,6 +185,7 @@ impl super::Module for GpuModule {
 
 #[test]
 fn get_gpu_info() {
+    use crate::modules::Module;
     let mut gpu_module = GpuModule::new(None);
     let gpu_data = gpu_module.load().unwrap();
     println!("{:#?}", gpu_data);

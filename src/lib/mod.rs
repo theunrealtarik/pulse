@@ -28,7 +28,7 @@ macro_rules! parse_from_line {
     };
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, derive_more::From)]
 pub struct Monitor(PathBuf);
 
 impl Monitor {
@@ -36,47 +36,68 @@ impl Monitor {
         &self.0
     }
 
-    pub fn new<F>(filter: F) -> Option<Self>
+    pub fn find_many_in_dir<F>(dir: &PathBuf, filter: F) -> Result<Vec<PathBuf>, PulseError>
     where
         F: Fn(&PathBuf) -> Result<bool, PulseError>,
     {
-        let hwmons = fs::read_dir(PathBuf::from(CLASS_HWMON)).ok()?;
-
-        for hwmon in hwmons {
-            let entry_path = hwmon.ok()?.path();
-
-            if let Ok(r) = filter(&entry_path)
-                && r
-            {
-                return Some(Monitor(entry_path));
-            }
-
-            continue;
-        }
-
-        None
+        Ok(fs::read_dir(&dir)?
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| match filter(&p) {
+                Ok(true) => true,
+                _ => false,
+            })
+            .collect::<Vec<_>>())
     }
 
-    pub fn entry<F>(&self, filter: F) -> Option<PathBuf>
+    pub fn find_in_dir<F>(dir: &PathBuf, filter: F) -> Result<PathBuf, PulseError>
     where
         F: Fn(&PathBuf) -> Result<bool, PulseError>,
     {
-        let monitor_dir = fs::read_dir(&self.0).ok()?;
-
-        for entry in monitor_dir {
-            let entry = entry.ok()?;
-            let entry_path = entry.path();
-
-            if let Ok(r) = filter(&entry_path)
-                && r
-            {
-                return Some(entry_path);
-            }
-
-            continue;
+        match Self::find_many_in_dir(dir, filter)?.first() {
+            Some(p) => Ok(p.clone()),
+            None => Err(PulseError::NotFound(format!(
+                "failed to find target in {}",
+                dir.to_string_lossy()
+            ))),
         }
+    }
 
-        None
+    pub fn new<F>(filter: F) -> Result<Self, PulseError>
+    where
+        F: Fn(&PathBuf) -> Result<bool, PulseError>,
+    {
+        let hwmon_path = PathBuf::from(CLASS_HWMON);
+        Self::find_in_dir(&hwmon_path, filter).map(Self)
+    }
+
+    /// Returns [`Monitor`] of path [`CLASS_HWMON`]`/hwmonX` based on the value of [`CLASS_HWMON`]`/hwmonX/name`
+    pub fn from_name<F>(filter: F) -> Result<Self, PulseError>
+    where
+        F: Fn(String) -> bool,
+    {
+        Monitor::new(|path| {
+            let name = fs::read_to_string(path.join("name"))?;
+            let name = name.to_lowercase();
+            return Ok(filter(name));
+        })
+    }
+
+    pub fn entry<F>(&self, filter: F) -> Result<PathBuf, PulseError>
+    where
+        F: Fn(&PathBuf) -> Result<bool, PulseError>,
+    {
+        Self::find_in_dir(&self.0, filter)
+    }
+
+    pub fn read<F>(&self, filter: F) -> Result<String, PulseError>
+    where
+        F: Fn(&PathBuf) -> Result<bool, PulseError>,
+    {
+        self.entry(filter)
+            .map(fs::read_to_string)?
+            .map(|s| s.trim().to_string())
+            .map_err(PulseError::from)
     }
 }
 
