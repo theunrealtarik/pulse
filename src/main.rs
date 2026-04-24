@@ -23,8 +23,21 @@ struct Args {
     once: bool,
     #[arg(long, num_args = 1.., value_delimiter = ' ', value_parser = Args::parse_refresh, help = "Set the refresh rate for each module (module:duration)")]
     refresh: Vec<(ModuleKind, Duration)>,
-    #[arg(long, num_args = 1.., value_delimiter = ' ', help = "To only fetch the provided modules and ignore the rest")]
+    #[arg(
+        long,
+        num_args = 1..,
+        value_delimiter = ' ',
+        help = "Run only the specified modules"
+    )]
     only: Vec<ModuleKind>,
+
+    #[arg(
+        long,
+        num_args = 1..,
+        value_delimiter = ' ',
+        help = "Exclude the specified modules (overrides `--only`)"
+    )]
+    ignore: Vec<ModuleKind>,
 }
 
 impl Args {
@@ -83,8 +96,9 @@ fn main() {
 
     let no_filter = args.only.is_empty();
     let only = args.only.iter().collect::<HashSet<_>>();
+    let ignore = args.ignore.iter().collect::<HashSet<_>>();
 
-    let enabled = |kind: &ModuleKind| no_filter || only.contains(kind);
+    let enabled = |kind: &ModuleKind| (no_filter || only.contains(kind)) && !ignore.contains(kind);
 
     let cpu = ModuleKind::Cpu;
     if enabled(&cpu) {
