@@ -15,13 +15,14 @@ It runs a scheduler that loads these modules regularly:
 Build and run with Cargo:
 
 ```sh
-cargo run --release -- [--modules] [--refresh module:duration ...]
+cargo run --release -- --help
 ```
 
 Options:
 
 - `--modules` prints available module names
 - `--refresh module:duration` sets refresh intervals for modules, e.g. `cpu:2s` or `net:500ms`
+- `--only [modules]` applies a filter on what system modules to run
 
 The program outputs a JSON object keyed by module name.
 
