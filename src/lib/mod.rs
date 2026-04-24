@@ -194,9 +194,24 @@ impl std::fmt::Display for Formatted {
 
 /// Bytes
 #[derive(
-    Debug, Default, Clone, Copy, Deserialize, derive_more::Add, derive_more::Mul, derive_more::From,
+    Debug,
+    Default,
+    Clone,
+    Copy,
+    Deserialize,
+    derive_more::Add,
+    derive_more::Sub,
+    derive_more::Mul,
+    derive_more::From,
+    derive_more::PartialEq,
 )]
 pub struct Bytes(u64);
+
+impl std::cmp::PartialOrd for Bytes {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
 
 impl Bytes {
     pub fn format(&self) -> Formatted {
@@ -327,5 +342,18 @@ impl Serialize for Frequency {
         state.serialize_field("formatted", &format!("{}", self))?;
 
         state.end()
+    }
+}
+
+/// Testing
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_bytes_ops() {
+        let lhs = Bytes::from(10);
+        let rhs = Bytes::from(5);
+        assert_eq!(lhs - rhs, Bytes::from(5));
     }
 }

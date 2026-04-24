@@ -1,4 +1,5 @@
 use std::fs;
+use std::os::linux::raw::stat;
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
@@ -76,9 +77,26 @@ impl Flag {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-struct Stats {
+pub struct Stats {
     rx: Bytes,
     tx: Bytes,
+}
+
+impl Stats {
+    fn delta(&self, prev: &Stats) -> Self {
+        Self {
+            rx: if self.rx > prev.rx {
+                self.rx - prev.rx
+            } else {
+                Bytes::from(0)
+            },
+            tx: if self.tx > prev.tx {
+                self.tx - prev.tx
+            } else {
+                Bytes::from(0)
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,28 +107,6 @@ pub struct Interface {
     path: PathBuf,
     flags: Vec<Flag>,
     stats: Stats,
-}
-
-impl Interface {
-    pub fn read_statistics(&self) -> Stats {
-        let rx_path = self.path.join("statistics/rx_bytes");
-        let tx_path = self.path.join("statistics/tx_bytes");
-
-        let rx = fs::read_to_string(rx_path)
-            .unwrap()
-            .parse::<u64>()
-            .unwrap_or_default();
-
-        let tx = fs::read_to_string(tx_path)
-            .unwrap()
-            .parse::<u64>()
-            .unwrap_or_default();
-
-        Stats {
-            rx: Bytes::from(rx),
-            tx: Bytes::from(tx),
-        }
-    }
 }
 
 type IfacesMap = HashMap<IfaceName, Interface>;
@@ -141,12 +137,35 @@ impl Network {
             "failed to parse default network iface".to_string(),
         ))
     }
+
+    pub fn read_iface_statistics(iface_path: &PathBuf) -> Stats {
+        let rx_path = iface_path.join("statistics/rx_bytes");
+        let tx_path = iface_path.join("statistics/tx_bytes");
+
+        let rx = fs::read_to_string(rx_path)
+            .unwrap()
+            .trim()
+            .parse::<u64>()
+            .unwrap_or_default();
+
+        let tx = fs::read_to_string(tx_path)
+            .unwrap()
+            .trim()
+            .parse::<u64>()
+            .unwrap_or_default();
+
+        Stats {
+            rx: Bytes::from(rx),
+            tx: Bytes::from(tx),
+        }
+    }
 }
 
 pub struct NetworkModule {
     name: String,
     interval: Duration,
     last: Option<Instant>,
+    stats: HashMap<IfaceName, Stats>,
 }
 
 impl NetworkModule {
@@ -155,6 +174,7 @@ impl NetworkModule {
             name: super::ModuleKind::Net.to_string(),
             interval: interval.unwrap_or(Duration::from_secs(1)),
             last: None,
+            stats: HashMap::new(),
         }
     }
 }
@@ -241,6 +261,14 @@ impl super::Module for NetworkModule {
                 get_if_addrs::IfAddr::V6(addr) => addr.ip.to_string(),
             });
 
+            let curr_stats = Network::read_iface_statistics(&path);
+            let stats = match self.stats.get(&name) {
+                Some(prev_stats) => curr_stats.delta(prev_stats),
+                None => Stats::default(),
+            };
+
+            self.stats.insert(name.clone(), curr_stats);
+
             ifaces.insert(
                 name.clone(),
                 Interface {
@@ -249,7 +277,7 @@ impl super::Module for NetworkModule {
                     ip,
                     path,
                     flags,
-                    stats: Stats::default(),
+                    stats,
                 },
             );
         }

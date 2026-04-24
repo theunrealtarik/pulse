@@ -14,7 +14,7 @@ libdrm_amdgpu_sys = { version = "0.8.13" }
 serde_json = "1.0.149"
 serde = { version = "1.0.228", features = ["derive"] }
 strum = { version = "0.28", features = ["derive"] }
-derive_more = { version = "2.1.1", features = ["from", "add", "mul" ]}
+derive_more = { version = "2.1.1", features = ["from", "add", "mul", "eq" ]}
 get_if_addrs = "0.5.3"
 sysinfo = "0.38.4"
 clap = { version = "4.0", features = ["derive"] }
