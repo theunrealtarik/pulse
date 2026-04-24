@@ -69,7 +69,8 @@ impl Scheduler {
                 if last.is_none() || now.duration_since(last.unwrap_or(now)) >= module.interval() {
                     let json = match module.load() {
                         Ok(data) => data,
-                        Err(_) => {
+                        Err(err) => {
+                            eprintln!("{:?}", err);
                             continue;
                         }
                     };

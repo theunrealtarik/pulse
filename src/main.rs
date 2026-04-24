@@ -134,5 +134,10 @@ fn main() {
         scheduler.push(Box::new(LoadModule::new(intervals.remove(&load))));
     }
 
+    let net = ModuleKind::Net;
+    if enabled(&net) {
+        scheduler.push(Box::new(NetworkModule::new(intervals.remove(&net))));
+    }
+
     scheduler.run(args.once);
 }
