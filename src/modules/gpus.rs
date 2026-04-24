@@ -1,7 +1,7 @@
 use lib::*;
 
 use libdrm_amdgpu_sys::AMDGPU::GPU_INFO;
-use serde::ser::SerializeStruct;
+
 use serde::{Deserialize, Serialize};
 
 use std::fs::File;
@@ -56,9 +56,9 @@ pub struct GpuModule {
 }
 
 impl GpuModule {
-    pub fn new(name: String, interval: Option<Duration>) -> Self {
+    pub fn new(interval: Option<Duration>) -> Self {
         Self {
-            name,
+            name: super::ModuleKind::Gpu.to_string(),
             interval: interval.unwrap_or(Duration::from_secs(1)),
             last: None,
         }
@@ -142,7 +142,7 @@ impl super::Module for GpuModule {
 
 #[test]
 fn get_gpu_info() {
-    let mut gpu_module = GpuModule::new(String::from("GPU"), None);
+    let mut gpu_module = GpuModule::new(None);
     let gpu_data = gpu_module.load().unwrap();
     println!("{:#?}", gpu_data);
 }

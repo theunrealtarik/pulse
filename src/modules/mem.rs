@@ -32,9 +32,9 @@ pub struct MemModule {
 }
 
 impl MemModule {
-    pub fn new(name: String, interval: Option<Duration>, sys: SharedSystem) -> Self {
+    pub fn new(interval: Option<Duration>, sys: SharedSystem) -> Self {
         Self {
-            name,
+            name: super::ModuleKind::Mem.to_string(),
             interval: interval.unwrap_or(Duration::from_secs(1)),
             last: None,
             sys,

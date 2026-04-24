@@ -11,7 +11,7 @@ use sysinfo::{Disks, System};
 
 use modules::{CpuModule, DiskModule, MemModule, ModuleKind, NetworkModule, Scheduler};
 
-use crate::modules::GpuModule;
+use crate::modules::{GpuModule, LoadModule};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -79,32 +79,27 @@ fn main() {
     }
 
     scheduler.push(Box::new(NetworkModule::new(
-        ModuleKind::Net.to_string(),
         intervals.remove(&ModuleKind::Net),
     )));
 
     scheduler.push(Box::new(CpuModule::new(
-        ModuleKind::Cpu.to_string(),
         intervals.remove(&ModuleKind::Cpu),
         Rc::clone(&sys),
     )));
 
-    scheduler.push(Box::new(GpuModule::new(
-        ModuleKind::Gpu.to_string(),
-        intervals.remove(&ModuleKind::Gpu),
-    )));
+    scheduler.push(Box::new(GpuModule::new(intervals.remove(&ModuleKind::Gpu))));
 
     scheduler.push(Box::new(MemModule::new(
-        ModuleKind::Mem.to_string(),
         intervals.remove(&ModuleKind::Mem),
         Rc::clone(&sys),
     )));
 
     scheduler.push(Box::new(DiskModule::new(
-        ModuleKind::Disk.to_string(),
         intervals.remove(&ModuleKind::Disk),
         Rc::clone(&dsk),
     )));
+
+    // scheduler.push(Box::new(LoadModule::))
 
     scheduler.run(args.once);
 }

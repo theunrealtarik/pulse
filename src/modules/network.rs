@@ -111,9 +111,9 @@ pub struct NetworkModule {
 }
 
 impl NetworkModule {
-    pub fn new(name: String, interval: Option<Duration>) -> Self {
+    pub fn new(interval: Option<Duration>) -> Self {
         Self {
-            name,
+            name: super::ModuleKind::Net.to_string(),
             interval: interval.unwrap_or(Duration::from_secs(1)),
             last: None,
         }

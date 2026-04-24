@@ -24,9 +24,9 @@ pub struct DiskModule {
 }
 
 impl DiskModule {
-    pub fn new(name: String, interval: Option<Duration>, disks: SharedDisks) -> Self {
+    pub fn new(interval: Option<Duration>, disks: SharedDisks) -> Self {
         Self {
-            name,
+            name: super::ModuleKind::Disk.to_string(),
             interval: interval.unwrap_or(Duration::from_secs(1)),
             last: None,
             disks,

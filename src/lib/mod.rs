@@ -231,6 +231,12 @@ impl Percent {
     }
 }
 
+impl From<f64> for Percent {
+    fn from(value: f64) -> Self {
+        Self(value as f32)
+    }
+}
+
 impl std::fmt::Display for Percent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:.0}%", self.0)
