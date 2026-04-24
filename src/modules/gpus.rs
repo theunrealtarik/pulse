@@ -90,12 +90,6 @@ impl super::Module for GpuModule {
     }
 
     fn load(&mut self) -> Result<serde_json::Value, lib::PulseError> {
-        let gpus_hw_paths = Monitor::find_many_in_dir(&PathBuf::from(CLASS_HWMON), |path| {
-            let name = fs::read_to_string(path.join("name"))?;
-            let name = name.trim().to_lowercase();
-            Ok(name.contains("amdgpu"))
-        })?;
-
         let libdrm_amdgpu = LibDrmAmdgpu::new()
             .map_err(|_| PulseError::Init(String::from("failed to initialize libdrm")))?;
         let pci_devs = AMDGPU::get_all_amdgpu_pci_bus();
