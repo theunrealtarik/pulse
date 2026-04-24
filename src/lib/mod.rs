@@ -287,6 +287,7 @@ impl Serialize for Percent {
         let mut state = serializer.serialize_struct("Percent", 2)?;
 
         state.serialize_field("raw", &self.0)?;
+        state.serialize_field("normalized", &(self.0 / 100.0))?;
         state.serialize_field("formatted", &format!("{}", self))?;
 
         state.end()
