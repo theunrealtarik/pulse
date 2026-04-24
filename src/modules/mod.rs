@@ -7,14 +7,14 @@ use std::{
 mod cpu;
 mod disk;
 mod gpus;
+mod load;
 mod mem;
 mod network;
-
-use lib::PulseError;
 
 pub use cpu::CpuModule;
 pub use disk::DiskModule;
 pub use gpus::GpuModule;
+pub use load::LoadModule;
 pub use mem::MemModule;
 pub use network::NetworkModule;
 
@@ -37,6 +37,7 @@ pub enum ModuleKind {
     Mem,
     Disk,
     Net,
+    Load,
 }
 
 pub trait Module {
