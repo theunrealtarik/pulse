@@ -198,6 +198,10 @@ impl super::Module for NetworkModule {
                 let cmd = Command::new("iw").args(["dev", &name, "link"]).output()?;
                 let output = String::from_utf8_lossy(&cmd.stdout);
 
+                if output.contains("Not connected.") {
+                    continue;
+                }
+
                 let ssid = parse_from_line!(output, 1)?;
                 let freq = parse_from_line!(output, 2)?
                     .parse::<f32>()

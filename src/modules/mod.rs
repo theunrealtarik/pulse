@@ -60,23 +60,28 @@ impl Scheduler {
         self.modules.push(m);
     }
 
-    pub fn run(&mut self) -> Result<(), PulseError> {
+    pub fn run(&mut self) {
         loop {
             let now = Instant::now();
             for module in self.modules.iter_mut() {
                 let last = module.get_last();
                 if last.is_none() || now.duration_since(last.unwrap_or(now)) >= module.interval() {
-                    let json = module.load()?;
+                    let json = match module.load() {
+                        Ok(data) => data,
+                        Err(_) => {
+                            continue;
+                        }
+                    };
+
                     self.object.insert(module.name().to_string(), json);
                     module.set_last(now);
                 }
             }
 
-            if !self.object.is_empty() {
-                println!(
-                    "{}",
-                    serde_json::to_value(&self.object).map_err(|err| PulseError::Json(err))?
-                );
+            if let Ok(output) = serde_json::to_value(&self.object)
+                && !self.object.is_empty()
+            {
+                println!("{}", output);
             }
 
             thread::sleep(Duration::from_millis(100));

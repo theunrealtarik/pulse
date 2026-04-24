@@ -104,5 +104,5 @@ fn main() {
         Rc::clone(&dsk),
     )));
 
-    scheduler.run().unwrap();
+    scheduler.run();
 }
